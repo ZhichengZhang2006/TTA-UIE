@@ -1,0 +1,25 @@
+base_config: configs/v1.yaml
+baseline_commit: 6b936ff4f29c67ceffe9e62e394648fb4f07f9cd
+seed: 2026
+checkpoint: checkpoints/source_seed2026.pt
+checkpoint_sha256: 479129a20eb1d8bc1a7b0d83ff7ce736e1b0d4152c17ed9be1b8101572bc2533
+budgets_8bit: [0.05, 0.10, 0.25, 0.50, 1.00, 2.00]
+relative_tolerance: 0.10
+alpha_min: 0.000001
+alpha_max: 1.0
+alpha_grid_steps: 32
+refinement_steps: 7
+parameter_relative_cap: 0.25
+parameter_absolute_cap: 0.5
+pilot_count: 40
+fixed_count: 200
+bootstrap_groups: 5000
+e2:
+  depth_grid: 8
+  depth_range: [0.5, 3.0]
+  beta_low: [0.6, 0.25, 0.1]
+  beta_high: [1.2, 0.7, 0.4]
+  background_range: [0.15, 0.6]
+  dual_beta_ratio: 0.55
+  noise_std: 0.0
+  perturbation_percent: [10, 20, 40]
