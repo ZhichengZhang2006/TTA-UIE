@@ -85,3 +85,26 @@ def test_dual_analytic_gradient():
     slope = torch.where(output <= 0.04045, 1 / 12.92, (2.4 / 1.055) * ((output + 0.055) / 1.055).pow(1.4))
     expected = -td * residual / (residual.square() + 1e-6).sqrt() * slope / output.numel()
     torch.testing.assert_close(actual, expected)
+
+
+def test_oracle_matches_mse_gradient():
+    from experiments.e1b_output_matched import oracle_direction
+    model = LinearAdapter()
+    image = torch.full((1, 3, 12, 12), 0.4)
+    reference = torch.full_like(image, 0.8)
+    actual, = oracle_direction(model, image, reference)
+    expected = 2 * ((image * model.weight - reference) * image).mean()
+    torch.testing.assert_close(actual, expected)
+    assert actual < 0
+
+
+def test_bootstrap_resamples_groups():
+    import numpy as np
+    from experiments.matched_report import bootstrap
+    settings = dict(seed=2026, bootstrap_groups=5000)
+    actual = bootstrap([0, 0, 1], ["large", "large", "small"], settings)
+    draw = np.random.default_rng(2026).integers(2, size=(5000, 2))
+    totals = np.array([0, 1])
+    sizes = np.array([2, 1])
+    manual = np.quantile(totals[draw].sum(1) / sizes[draw].sum(1), [0.025, 0.975])
+    np.testing.assert_equal(actual, manual)

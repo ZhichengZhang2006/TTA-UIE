@@ -48,3 +48,21 @@ python tools/check_leakage.py --target-root \
 - `results/e1_summary.json`、四幅诊断图和 `reports/E1_findings.md` 给出正式结果。
 
 研究依据和实现选择见 [研究规范](docs/PR_TTA_Research_Protocol_v1.md) 及 [实现约定](docs/implementation_decisions.md)。
+
+## E1b–E2 假设验证
+
+[v0.1 分支](https://github.com/ZhichengZhang2006/TTA-UIE/tree/v0.1) 固定 E0–E1 基线。后续实验继承同一 checkpoint，从 Utility Fit 中按完整去重组划出 40 张 Pilot 和 200 张 Fixed，240 张登记为 diagnostic_consumed，剩余 410 张用于后续独立规划。
+
+本阶段检验 Adapter 的参考 Oracle 能力、相同输出预算下的物理/随机/错误参数/融合方向，以及已知参数误差和双衰减模型失配。设置、生成分布和统计解释见 [E1b–E2 实现约定](docs/E1b_E2_implementation.md)，研究要求见 [执行计划](docs/PR_TTA_E1b_E2_Research_Plan.md)。
+
+```bash
+python tools/prepare_diagnostics.py --config configs/e1b_output_matched.yaml
+python experiments/e1b_output_matched.py --config configs/e1b_output_matched.yaml --manifest manifests/lsui_e1b_pilot.csv --phase pilot
+python experiments/e1b_output_matched.py --config configs/e1b_output_matched.yaml --manifest manifests/lsui_e1b_fixed.csv --phase fixed
+python experiments/e2_parameter_mismatch.py --config configs/e1b_output_matched.yaml --manifest manifests/lsui_e1b_fixed.csv --phase fixed
+python tools/audit_cross_dataset_duplicates.py --input manifests/cross_dataset_matches.csv
+python tools/diagnostic_figures.py
+python tools/write_e1b_e2_report.py
+```
+
+E1b 和 E2 在此服务器串行运行。各阶段输出保存于 `results/e1b/{pilot,fixed}` 和 `results/e2/fixed`，包括逐图 CSV、全部预算曲线、组 bootstrap 区间和失败案例。`preregistration.json` 固定配置、checkpoint 和清单摘要。最终报告为 `reports/E1b_E2_findings.md`。
