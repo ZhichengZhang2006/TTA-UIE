@@ -1,6 +1,6 @@
 """Reference-free bounded search for a fixed sRGB output drift."""
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import torch
 
@@ -18,6 +18,7 @@ class Matched:
     parameter_delta: float
     evaluations: int
     nearest_drift: float
+    attempts: list = field(default_factory=list)
 
 
 @torch.no_grad()
@@ -36,6 +37,7 @@ def match_direction(model, image, static, direction, budgets, settings):
     points = [(0.0, 0.0)]
     best = [None for _ in budgets]
     evaluations = 0
+    attempts = []
 
     def evaluate(alpha):
         nonlocal evaluations
@@ -45,6 +47,8 @@ def match_direction(model, image, static, direction, budgets, settings):
         output = model(image).detach()
         drift = float((output - static).square().mean().sqrt())
         evaluations += 1
+        attempts.append(dict(alpha=alpha, drift=drift if math.isfinite(drift) else None,
+                             parameter_delta=alpha * direction_norm))
         if not math.isfinite(drift):
             return None
         for i, budget in enumerate(budgets):
@@ -85,14 +89,14 @@ def match_direction(model, image, static, direction, budgets, settings):
         results = []
         for budget, candidate in zip(budgets, best):
             if candidate is None:
-                results.append(Matched(static, False, "nonfinite_output", 0, 0, 0, evaluations, 0))
+                results.append(Matched(static, False, "nonfinite_output", 0, 0, 0, evaluations, 0, attempts))
                 continue
             alpha, drift, output = candidate
             valid = abs(drift - budget) <= settings["relative_tolerance"] * budget
             results.append(Matched(
                 output if valid else static, valid, "" if valid else "drift_unreachable",
                 alpha if valid else 0, drift if valid else 0,
-                alpha * direction_norm if valid else 0, evaluations, drift,
+                alpha * direction_norm if valid else 0, evaluations, drift, attempts,
             ))
         return results
     finally:

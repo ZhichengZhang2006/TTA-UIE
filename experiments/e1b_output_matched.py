@@ -1,5 +1,6 @@
 """Run frozen source-only output-matched diagnostics."""
 import argparse
+import json
 import os
 import sys
 import time
@@ -70,7 +71,7 @@ def e2_hypotheses(image, truth, settings, dual):
     return hypotheses
 
 
-def evaluate_candidates(model, image, reference, hypotheses, settings, metadata, include_controls, donor_background=None):
+def evaluate_candidates(model, image, reference, hypotheses, settings, metadata, include_controls, donor_background=None, record_attempts=False):
     diagnostic = settings["diagnostic"]
     budgets = [pixel / 255 for pixel in diagnostic["budgets_8bit"]]
     epsilon = settings["physics"]["charbonnier_eps"]
@@ -147,6 +148,8 @@ def evaluate_candidates(model, image, reference, hypotheses, settings, metadata,
                     runtime_ms=runtime, search_ms=search_runtime, gradient_ms=gradient_times.get(method, 0),
                     forward_evaluations=matched.evaluations,
                 ))
+                if record_attempts:
+                    records[-1]["search_attempts"] = json.dumps(matched.attempts) if index == 1 else "shared_with_first_budget"
                 if method in ("physical", "estimated", "simplified_estimated") and pixel == 1.0 and p[index] < p[0]:
                     failures.append((p[index] - p[0], metadata["image_id"],
                                      torch.cat((image, static, matched.output, reference)).cpu()))

@@ -1,0 +1,32 @@
+base_config: configs/v1.yaml
+matching_config: configs/e1b_output_matched.yaml
+checkpoint: checkpoints/source_seed2026.pt
+checkpoint_sha256: 479129a20eb1d8bc1a7b0d83ff7ce736e1b0d4152c17ed9be1b8101572bc2533
+seeds: [2026, 2027, 2028]
+budgets_8bit: [0.25, 0.5, 1.0, 2.0]
+primary_budgets_8bit: [0.5, 1.0]
+gate_count: 120
+development_manifest: manifests/lsui_e1b_pilot.csv
+factorial_manifest: manifests/lsui_e1b_fixed.csv
+gate_manifest: manifests/lsui_e2b_gate.csv
+epochs: 60
+batch_size: 16
+lr: 0.0002
+weight_decay: 0.0001
+amp: bf16
+estimator_channels: [16, 32, 64]
+estimator_resolution: 64
+loss_weights: [1.0, 1.0, 1.0, 1.0]
+effective:
+  grid: 8
+  fit_steps: 80
+  fit_lr: 0.05
+  prior_weight: 0.05
+  tv_weight: 0.01
+  background_prior_weight: 0.01
+  deploy_epochs: 60
+  trigger_synthetic_relative_mae: 0.95
+  trigger_real_mean_db: 0.05
+go:
+  minimum_gain_db: 0.05
+  maximum_harm_fraction: 0.15
