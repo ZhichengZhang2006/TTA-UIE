@@ -231,6 +231,21 @@ def main():
         "", "```bash","python tools/prepare_e2b.py","python experiments/e2b_factorial_error.py",
         "python experiments/e2b_estimator_training.py","python experiments/e2b_pipeline.py",
         "python tools/prepare_conservative_targets.py","python tools/report_e2b.py","```",""]
+    at_one = {r["method"]: r for r in seed_summary if r["budget"] == 1.0}
+    residual_reach = np.mean([r["reachability"] for r in summary if r["method"] == "residual" and r["budget"] == 1.0]) if "residual" in at_one else None
+    overview = ["## 主要结论", "", "本轮新物理梯度方法均未达到预注册推进标准：物理梯度 TTA 路线判为 No-Go，暂不进入 E3。"
+        if not passed else "存在达到内部标准的方法，需结合逐种子与独立数据复核。", ""]
+    for method in deployable:
+        item = at_one[method]
+        overview += [f"- {method} 在 1/255 的三种子平均 ΔPSNR 为 {item['mean']:+.6f} dB，种子标准差 {item['seed_sd']:.6f} dB，有害率 {item['harmful']:.1%}。"]
+    if "effective_label_oracle" in at_one:
+        overview += [f"- 源域标签拟合有效参数 Oracle 为 {at_one['effective_label_oracle']['mean']:+.6f} dB，监督 Adapter Oracle 为 {at_one['oracle']['mean']:+.6f} dB。可部署预测器未实现该诊断潜力。"]
+    if "residual" in at_one:
+        overview += [f"- 残差对照为 {at_one['residual']['mean']:+.6f} dB，匹配成功率 {residual_reach:.1%}；不可达候选按协议回退静态，因而该数值包含大量不更新样本。成功匹配子集的配对比较另表报告，不能把整体差值都归因为物理建模。"]
+    overview += ["", "合成参数改善支持选定生成分布中的估计能力，尚不支持真实域稳定更新收益。"
+        "SSPE/有效参数采用全图重投影，UDCP 使用自身置信权重，实域比较衡量完整候选方案；"
+        "参数因子诊断则固定同一置信掩码。目标域未计算恢复分数，未来 290 图和风险校准集仍封存。", ""]
+    lines[2:2] = overview
     Path("reports/E2b_findings.md").write_text("\n".join(lines),encoding="utf-8")
 
 
