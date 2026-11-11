@@ -5,6 +5,7 @@ import json
 import math
 from collections import Counter
 from pathlib import Path
+import yaml
 
 
 def sha(path):
@@ -18,6 +19,8 @@ def rows(path):
 
 def main():
     root = Path("results/e2b")
+    config = yaml.safe_load(Path("configs/e2b_operator_study.yaml").read_text())
+    matching = yaml.safe_load(Path(config["matching_config"]).read_text())
     lock = json.loads((root / "gate/opened.json").read_text())
     assert lock["config_sha256"] == sha("configs/e2b_operator_study.yaml")
     assert lock["manifest_sha256"] == sha("manifests/lsui_e2b_gate.csv")
@@ -50,7 +53,7 @@ def main():
         assert float(r["parameter_delta_l2"]) <= .500001
         if r["valid"] == "True":
             target = float(r["target_rms_8bit"])
-            assert abs(float(r["achieved_rms_8bit"]) - target) <= .05 * target + 1e-6
+            assert abs(float(r["achieved_rms_8bit"]) - target) <= matching["relative_tolerance"] * target + 1e-6
         else:
             assert float(r["delta_psnr"]) == 0 and float(r["achieved_rms_8bit"]) == 0
         if float(r["target_rms_8bit"]) == .25:

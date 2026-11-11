@@ -120,6 +120,7 @@ def train_one(config, base, device, mode, seed, teacher=None):
     root.mkdir(parents=True, exist_ok=True)
     amp = device.type == "cuda" and config["amp"] == "bf16"
     metric = SSIM().to(device)
+    static_cache, cache_checks, cache_enabled = {}, 0, True
     with (root / f"{mode}_{seed}_generation.jsonl").open("a", encoding="utf-8") as generation:
         for epoch in range(first, config["epochs"]):
             began = time.perf_counter()
@@ -135,7 +136,24 @@ def train_one(config, base, device, mode, seed, teacher=None):
                     static = None
                 else:
                     with torch.no_grad():
-                        static = backbone(image)
+                        keys = [(len(batch[2]), key) for key in batch[2]]
+                        hit = cache_enabled and all(key in static_cache for key in keys)
+                        if hit:
+                            static = torch.cat([static_cache[key] for key in keys]).to(device, memory_format=torch.channels_last)
+                            if cache_checks < 2:
+                                fresh = backbone(image)
+                                if not torch.equal(static, fresh):
+                                    print("Static cache disabled: bitwise equivalence failed", flush=True)
+                                    cache_enabled = False
+                                    static_cache.clear()
+                                    static = fresh
+                                cache_checks += 1
+                        else:
+                            static = backbone(image)
+                            if cache_enabled:
+                                cached = static.cpu()
+                                for key, value in zip(keys, cached):
+                                    static_cache[key] = value.unsqueeze(0).clone()
                     if mode == "effective":
                         indices = [id_index[key] for key in batch[2]]
                         field = teacher["fields"][indices].to(device)
@@ -166,7 +184,8 @@ def train_one(config, base, device, mode, seed, teacher=None):
             write_csv(root / f"{mode}_{seed}.csv", history, list(record))
             print(mode, seed, record, flush=True)
     write_json(root / f"{mode}_{seed}_run.json", dict(run_info(base, device), estimator_parameters=parameters,
-        checkpoint_sha256=sha_file(path), config_sha256=config_hash, selection="development loss only"))
+        checkpoint_sha256=sha_file(path), config_sha256=config_hash, selection="development loss only",
+        static_cache_enabled=cache_enabled if backbone is not None else False, static_cache_bitwise_checks=cache_checks))
 
 
 def main():
