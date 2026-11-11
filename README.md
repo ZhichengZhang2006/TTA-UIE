@@ -66,3 +66,19 @@ python tools/write_e1b_e2_report.py
 ```
 
 E1b 和 E2 在此服务器串行运行。各阶段输出保存于 `results/e1b/{pilot,fixed}` 和 `results/e2/fixed`，包括逐图 CSV、全部预算曲线、组 bootstrap 区间和失败案例。`preregistration.json` 固定配置、checkpoint 和清单摘要。最终报告为 `reports/E1b_E2_findings.md`。
+
+## E2b 参数估计与候选方向验证
+
+E2b 检验 t/B 误差归因、合成监督估计是否改善真实更新、有效成像参数的条件分支，以及物理梯度相对解析融合和翻转旋转一致性的独立优势。保留 v0.1 基线，固定增强模型；新估计器分别训练三个种子。实现设置见 [E2b 执行设置](docs/E2b_implementation.md)。
+
+```bash
+python tools/prepare_e2b.py
+python experiments/e2b_factorial_error.py
+python experiments/e2b_estimator_training.py
+python experiments/e2b_pipeline.py
+python tools/prepare_conservative_targets.py
+python tools/audit_e2b.py
+python tools/report_e2b.py
+```
+
+配置固定于 `configs/e2b_operator_study.yaml`。流水线先运行测试与开发诊断，再按预设条件决定是否训练有效参数预测器及残差对照，最后只开启一次 120 张验收集。剩余 290 张 Utility Fit 留待后续，329 张 Risk Calibration 封存。失败候选保留为静态输出，统计按去重组 bootstrap，并报告三个估计器种子的差异。报告保存为 `reports/E2b_findings.md`；本阶段不启动 E3，不计算最终目标域恢复成绩。
