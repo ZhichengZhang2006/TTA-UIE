@@ -105,7 +105,7 @@ def train_one(config, base, device, mode, seed, teacher=None):
     development = PairedImages(base, "utility_fit")
     development.rows = read_csv(config["development_manifest"])
     development.prepare_cache(base["data"]["manifest_workers"])
-    backbone = load_static(base, device)[0].requires_grad_(False) if mode in ("effective", "residual") else None
+    backbone = load_static(base, device, Path(config["checkpoint"]))[0].requires_grad_(False) if mode in ("effective", "residual") else None
     id_index = {key: i for i, key in enumerate(teacher["ids"])} if teacher else None
     path = operator_path(mode, seed)
     latest = path.with_name(path.stem + "_latest.pt")
