@@ -82,12 +82,14 @@ def operator_fusion(image, static, hypothesis, budgets, settings):
                              / hypothesis.transmission).clamp(0, 1))
     distance = float((inverse - static).square().mean().sqrt())
     results = []
+    attempts = []
     for budget in budgets:
         valid = distance > 0 and budget <= distance
         alpha = budget / distance if valid else 0
         output = torch.lerp(static, inverse, alpha)
         drift = float((output - static).square().mean().sqrt())
         valid = valid and abs(drift - budget) <= settings["relative_tolerance"] * budget
+        attempts.append(dict(target_rms=budget, alpha=alpha, drift=drift, parameter_delta=0.0))
         results.append(Matched(output if valid else static, valid, "" if valid else "drift_unreachable",
-                               alpha if valid else 0, drift if valid else 0, 0, 1, min(distance, budget)))
+                               alpha if valid else 0, drift if valid else 0, 0, 1, min(distance, budget), attempts))
     return results

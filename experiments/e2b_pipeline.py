@@ -10,6 +10,11 @@ def invoke(*arguments):
 
 
 def main():
+    if Path("results/e2b/gate/opened.json").exists():
+        if not Path("results/e2b/gate/run.json").exists():
+            invoke("experiments/e2b_direction_comparison.py", "--phase", "gate")
+        Path("logs/e2b_experiments.done").write_text("All E2b experiments completed\n")
+        return
     invoke("-m", "pytest", "-q", "tests/")
     # Repeat the same pre-training factorial settings with full search-attempt logging.
     invoke("experiments/e2b_factorial_error.py")

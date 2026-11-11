@@ -46,6 +46,8 @@ def parameter_errors(predicted, truth):
         spearman_td=float(correlation) if np.isfinite(correlation) else None,
         t_boundary_fraction=float(((td <= 0.050001) | (td >= 0.979999)).float().mean()),
         b_boundary_fraction=float(((predicted.background <= 1e-6) | (predicted.background >= 0.999999)).float().mean()),
+        predicted_background=predicted.background.flatten().tolist(),
+        transmission_spatial_std=float(td.std(dim=(-2, -1)).mean()),
     )
 
 
@@ -88,11 +90,12 @@ def main():
                         for m in ("P00", "P10", "P01", "P11")}
             keys = list(selected["P00"])
             for valid_only in (False, True):
-                ids = [key for key in keys if not valid_only or all(selected[m][key]["valid"] for m in selected)]
-                groups = [selected["P00"][key]["group_id"] for key in ids]
                 for label, coefficients in (
                     ("Delta_t", (1,-1,0,0)), ("Delta_B", (1,0,-1,0)), ("interaction", (1,-1,-1,1)),
                 ):
+                    required = [m for m, coefficient in zip(selected, coefficients) if coefficient]
+                    ids = [key for key in keys if not valid_only or all(selected[m][key]["valid"] for m in required)]
+                    groups = [selected["P00"][key]["group_id"] for key in ids]
                     values = [sum(coef * selected[m][key]["delta_psnr"] for m, coef in zip(selected, coefficients)) for key in ids]
                     ci = bootstrap(values, groups, base["diagnostic"])
                     estimates.append(dict(model=mode, budget=budget, contrast=label, both_valid=valid_only, n=len(ids),
